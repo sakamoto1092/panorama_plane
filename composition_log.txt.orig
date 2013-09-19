@@ -1,4 +1,8 @@
+<<<<<<< HEAD
 /home/k-sakamoto/workspace/my_panorama_plane/Debug/my_panorama cam_data.txt center/GC_B_05_center.png 0 2000 5
+=======
+/home/k-sakamoto/workspace/my_panorama_plane/Debug/my_panorama cam_data.txt center/GC_B_06_center.png 0 2000 5
+>>>>>>> origin/master
 <avi_file_name>
 /d/mvsraid/DATA/2013-06-28-FukuiCityGym-BasketBall/ORIGINAL/GC-B-05/20130628_141343_308.3gp
 <A1>
@@ -6,8 +10,13 @@
   0, 1, -360;
   0, 0, 1080]
 <A2>
+<<<<<<< HEAD
 [1080, 0, 1280;
   0, 1080, 720;
+=======
+[1000, 0, 1280;
+  0, 1000, 720;
+>>>>>>> origin/master
   0, 0, 1]
 <roll pitch yaw>
 0 0 0
@@ -22,8 +31,15 @@
 <Algorithm> 
 SURF
 <Algorithm Param>
+<<<<<<< HEAD
 extended 1
 hessianThreshold 5
 nOctaveLayers 4
 nOctaves 3
+=======
+extended 0
+hessianThreshold 100
+nOctaveLayers 3
+nOctaves 4
+>>>>>>> origin/master
 upright 0
