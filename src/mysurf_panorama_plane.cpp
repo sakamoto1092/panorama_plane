@@ -600,24 +600,7 @@ int main(int argc, char** argv) {
 		 // 特徴点をコピー
 		 est_pt1 = est_pt2;
 
-		 for (int i = 0; i < w; i++) {
-		 for (int j = 0; j < h; j++) {
-		 cal = transform_image.at<Vec3b> (j, i);
-		 //               if(cal.val[0]!=0||cal.val[1]!=0||cal.val[2]!=0){
-		 tmpc = transform_image2.at<Vec3b> (j, i);
-		 if (mask.at<unsigned char> (j, i) == 0) {
-		 //if(tmpc.val[0]==0&&tmpc.val[1]==0&&tmpc.val[2]==0){
-		 tmpc.val[0] = cal.val[0];
-		 tmpc.val[1] = cal.val[1];
-		 tmpc.val[2] = cal.val[2];
-		 if (matrixA.at<unsigned char> (j, i) == 255)
-		 mask.at<unsigned char> (j, i) = matrixA.at<
-		 unsigned char> (j, i);
-
-		 }
-		 transform_image2.at<Vec3b> (j, i) = tmpc;
-		 }
-		 }
+		 make_pano(transform_image, transform_image2, mask, matrixA);
 		 ss << "frame = " << frame_num;
 		 putText(transform_image, ss.str(), Point(100, 100),
 		 CV_FONT_HERSHEY_SIMPLEX, 1.0, Scalar(255, 255, 255), 1, 8);
