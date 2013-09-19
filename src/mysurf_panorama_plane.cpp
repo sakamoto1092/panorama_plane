@@ -15,9 +15,12 @@ long FRAME_MAX; // 最大フレーム数
 #define FRAME_T 4       // フレーム飛ばし間隔
 #define PANO_W 2560
 #define PANO_H 1440
+<<<<<<< HEAD
 #define f_comp 1
 #define f_center 1
 #define f_deblur 1
+=======
+>>>>>>> origin/master
 using namespace std;
 using namespace cv;
 
@@ -230,10 +233,13 @@ int main(int argc, char** argv) {
 	//	char object_filename[128];
 	//	char scene_filename[128];
 
+<<<<<<< HEAD
 	ofstream log("composition_log.txt");
 	vector<string> v_log_str;
 	string log_str;
 
+=======
+>>>>>>> origin/master
 	char imagefileName[256];
 	char timefileName[256];
 	char sensorfileName[256];
@@ -254,8 +260,15 @@ int main(int argc, char** argv) {
 	Mat h_base = cv::Mat::eye(3, 3, CV_64FC1); // センターサークル画像へのホモグラフィ−
 	//	vector<int> ptpairs;
 	vector<Point2f> pt1, pt2; // 画像対における特徴点の集合
+<<<<<<< HEAD
 	int n, w, h;
 
+=======
+	Mat _pt1, _pt2; // 特徴点の座標の行列
+	int n, w, h;
+	Vec3b cal;
+	Vec3b tmpc;
+>>>>>>> origin/master
 
 	// パノラマ平面の
 	int roll = 0;
@@ -316,6 +329,7 @@ int main(int argc, char** argv) {
 	Mat gray_image;
 
 	// 最初のフレームを取得（センターサークル画像に差し替え）
+<<<<<<< HEAD
 	if (f_center)
 		image = center_img.clone();
 	else
@@ -324,6 +338,14 @@ int main(int argc, char** argv) {
 
 	// 各種アルゴリズムによる特徴点検出および特徴量記述
 	string algorithm_type = "SURF";
+=======
+	cap >> image;
+	//image = center_img.clone();
+	cvtColor(image, gray_image, CV_RGB2GRAY);
+
+	// 各種アルゴリズムによる特徴点検出および特徴量記述
+	string type = "SURF";
+>>>>>>> origin/master
 
 	// SIFT 
 	//	cv::SIFT feature;
@@ -333,6 +355,7 @@ int main(int argc, char** argv) {
 	SURF feature(5, 3, 4, true);
 	//SURF feature;
 
+<<<<<<< HEAD
 	feature.getParams(v_log_str);
 
 	/*logging*/
@@ -355,6 +378,8 @@ int main(int argc, char** argv) {
 	for (int ii = 0; ii < v_log_str.size(); ii++)
 		log << v_log_str[ii] << " " << feature.getDouble(v_log_str[ii]) << endl;
 
+=======
+>>>>>>> origin/master
 	//SurfFeatureDetector detector(5, 3, 4, true);
 	//SurfDescriptorExtractor extractor;
 
@@ -381,6 +406,7 @@ int main(int argc, char** argv) {
 
 	// パノラマ動画ファイルを作成
 	VideoWriter.open("panorama.avi", CV_FOURCC('X', 'V', 'I', 'D'), (int) fps,
+<<<<<<< HEAD
 			Size(PANO_W * 0.75, PANO_H * 0.75), 1);
 
 	warpPerspective(matrixB, matrixA, h_base, Size(PANO_W, PANO_H),
@@ -393,6 +419,20 @@ int main(int argc, char** argv) {
 	//	waitKey(0);
 	//	imshow("mask2",mask2);
 	//	waitKey(0);
+=======
+			Size(PANO_W*0.75, PANO_H*0.75), 1);
+
+	warpPerspective(matrixB, matrixA, h_base, Size(PANO_W, PANO_H), CV_INTER_LINEAR
+			| CV_WARP_FILL_OUTLIERS);
+
+	make_pano(transform_image,transform_image2,mask,matrixA);
+	Mat mask2;
+	erode(mask,mask2,cv::Mat(), cv::Point(-1,-1), 10);
+//	imshow("mask1",mask);
+//	waitKey(0);
+//	imshow("mask2",mask2);
+//	waitKey(0);
+>>>>>>> origin/master
 
 	feature(transform_image2, mask2, imageKeypoints, imageDescriptors);
 	// フレームを飛ばす
@@ -414,12 +454,16 @@ int main(int argc, char** argv) {
 
 
 	vector<Mat> hist_image;
+<<<<<<< HEAD
 	int blur_skip;
 
 	if (f_center)
 		blur_skip = 0;
 	else
 		blur_skip = FRAME_T;
+=======
+	int blur_skip = 9;
+>>>>>>> origin/master
 
 	while (frame_num <= FRAME_MAX && frame_num <= end) {
 
@@ -600,7 +644,28 @@ int main(int argc, char** argv) {
 		 // 特徴点をコピー
 		 est_pt1 = est_pt2;
 
+<<<<<<< HEAD
 		 make_pano(transform_image, transform_image2, mask, matrixA);
+=======
+		 for (int i = 0; i < w; i++) {
+		 for (int j = 0; j < h; j++) {
+		 cal = transform_image.at<Vec3b> (j, i);
+		 //               if(cal.val[0]!=0||cal.val[1]!=0||cal.val[2]!=0){
+		 tmpc = transform_image2.at<Vec3b> (j, i);
+		 if (mask.at<unsigned char> (j, i) == 0) {
+		 //if(tmpc.val[0]==0&&tmpc.val[1]==0&&tmpc.val[2]==0){
+		 tmpc.val[0] = cal.val[0];
+		 tmpc.val[1] = cal.val[1];
+		 tmpc.val[2] = cal.val[2];
+		 if (matrixA.at<unsigned char> (j, i) == 255)
+		 mask.at<unsigned char> (j, i) = matrixA.at<
+		 unsigned char> (j, i);
+
+		 }
+		 transform_image2.at<Vec3b> (j, i) = tmpc;
+		 }
+		 }
+>>>>>>> origin/master
 		 ss << "frame = " << frame_num;
 		 putText(transform_image, ss.str(), Point(100, 100),
 		 CV_FONT_HERSHEY_SIMPLEX, 1.0, Scalar(255, 255, 255), 1, 8);
@@ -638,6 +703,7 @@ int main(int argc, char** argv) {
 		// 補完の際に上書きしているのでフレームを再取得
 		//cap >> object;
 
+<<<<<<< HEAD
 		warpPerspective(object, transform_image, homography, Size(PANO_W,
 				PANO_H));
 
@@ -646,16 +712,33 @@ int main(int argc, char** argv) {
 				CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS);
 
 		make_pano(transform_image, transform_image2, mask, matrixA);
+=======
+		warpPerspective(object, transform_image, homography, Size(PANO_W, PANO_H));
+
+		Mat h2 = homography;
+		warpPerspective(matrixB, matrixA, h2, Size(PANO_W, PANO_H), CV_INTER_LINEAR
+				| CV_WARP_FILL_OUTLIERS);
+
+		make_pano(transform_image,transform_image2,mask,matrixA);
+>>>>>>> origin/master
 		ss << "frame = " << frame_num;
 		putText(transform_image, ss.str(), Point(100, 100),
 				CV_FONT_HERSHEY_SIMPLEX, 1.0, Scalar(255, 255, 255), 1, 8);
 		ss.clear();
 		ss.str("");
+<<<<<<< HEAD
 		resize(transform_image, r_result, Size(), 0.75, 0.75, INTER_LINEAR);
 		VideoWriter.write(r_result);
 		imshow("Object Correspond", transform_image2);
 		waitKey(30);
 		erode(mask, mask2, cv::Mat(), cv::Point(-1, -1), 10);
+=======
+		resize(transform_image,r_result,Size(),0.75,0.75,INTER_LINEAR);
+		VideoWriter.write(r_result);
+		imshow("Object Correspond", transform_image2);
+		waitKey(30);
+		erode(mask,mask2,cv::Mat(), cv::Point(-1,-1), 10);
+>>>>>>> origin/master
 		feature(transform_image2, mask2, imageKeypoints, imageDescriptors);
 		blur_skip = FRAME_T;
 		for (int i = 0; i < FRAME_T; i++) {
