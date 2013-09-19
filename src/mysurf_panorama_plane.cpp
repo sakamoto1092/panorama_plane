@@ -15,6 +15,9 @@ long FRAME_MAX; // 最大フレーム数
 #define FRAME_T 4       // フレーム飛ばし間隔
 #define PANO_W 2560
 #define PANO_H 1440
+#define f_comp 1
+#define f_center 1
+#define f_deblur 1
 using namespace std;
 using namespace cv;
 
@@ -227,6 +230,10 @@ int main(int argc, char** argv) {
 	//	char object_filename[128];
 	//	char scene_filename[128];
 
+	ofstream log("composition_log.txt");
+	vector<string> v_log_str;
+	string log_str;
+
 	char imagefileName[256];
 	char timefileName[256];
 	char sensorfileName[256];
@@ -247,10 +254,8 @@ int main(int argc, char** argv) {
 	Mat h_base = cv::Mat::eye(3, 3, CV_64FC1); // センターサークル画像へのホモグラフィ−
 	//	vector<int> ptpairs;
 	vector<Point2f> pt1, pt2; // 画像対における特徴点の集合
-	Mat _pt1, _pt2; // 特徴点の座標の行列
 	int n, w, h;
-	Vec3b cal;
-	Vec3b tmpc;
+
 
 	// パノラマ平面の
 	int roll = 0;
@@ -311,12 +316,14 @@ int main(int argc, char** argv) {
 	Mat gray_image;
 
 	// 最初のフレームを取得（センターサークル画像に差し替え）
-	cap >> image;
-	//image = center_img.clone();
+	if (f_center)
+		image = center_img.clone();
+	else
+		cap >> image;
 	cvtColor(image, gray_image, CV_RGB2GRAY);
 
 	// 各種アルゴリズムによる特徴点検出および特徴量記述
-	string type = "SURF";
+	string algorithm_type = "SURF";
 
 	// SIFT 
 	//	cv::SIFT feature;
@@ -325,6 +332,28 @@ int main(int argc, char** argv) {
 	//Surf
 	SURF feature(5, 3, 4, true);
 	//SURF feature;
+
+	feature.getParams(v_log_str);
+
+	/*logging*/
+	log << argv[0] << " " << argv[1] << " " << argv[2] << " " << argv[3] << " "
+			<< argv[4] << " " << argv[5] << endl;
+
+	log << "<avi_file_name>" << endl << imagefileName << endl;
+	log << "<A1>" << endl << A1Matrix << endl;
+	log << "<A2>" << endl << A2Matrix << endl;
+	log << "<roll pitch yaw>" << endl;
+	log << roll << " " << pitch << " " << yaw << endl;
+	log << "<FRAME_ T> " << endl << FRAME_T << endl;
+	log << "<Comp>" << endl;
+	log << f_comp << endl;
+	log << "<use center>" << endl;
+	log << f_center << endl;
+	log << "<deblur>" << endl << f_deblur << endl;
+	log << "<Algorithm> " << endl << algorithm_type << endl;
+	log << "<Algorithm Param>" << endl;
+	for (int ii = 0; ii < v_log_str.size(); ii++)
+		log << v_log_str[ii] << " " << feature.getDouble(v_log_str[ii]) << endl;
 
 	//SurfFeatureDetector detector(5, 3, 4, true);
 	//SurfDescriptorExtractor extractor;
@@ -352,18 +381,18 @@ int main(int argc, char** argv) {
 
 	// パノラマ動画ファイルを作成
 	VideoWriter.open("panorama.avi", CV_FOURCC('X', 'V', 'I', 'D'), (int) fps,
-			Size(PANO_W*0.75, PANO_H*0.75), 1);
+			Size(PANO_W * 0.75, PANO_H * 0.75), 1);
 
-	warpPerspective(matrixB, matrixA, h_base, Size(PANO_W, PANO_H), CV_INTER_LINEAR
-			| CV_WARP_FILL_OUTLIERS);
+	warpPerspective(matrixB, matrixA, h_base, Size(PANO_W, PANO_H),
+			CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS);
 
-	make_pano(transform_image,transform_image2,mask,matrixA);
+	make_pano(transform_image, transform_image2, mask, matrixA);
 	Mat mask2;
-	erode(mask,mask2,cv::Mat(), cv::Point(-1,-1), 10);
-//	imshow("mask1",mask);
-//	waitKey(0);
-//	imshow("mask2",mask2);
-//	waitKey(0);
+	erode(mask, mask2, cv::Mat(), cv::Point(-1, -1), 10);
+	//	imshow("mask1",mask);
+	//	waitKey(0);
+	//	imshow("mask2",mask2);
+	//	waitKey(0);
 
 	feature(transform_image2, mask2, imageKeypoints, imageDescriptors);
 	// フレームを飛ばす
@@ -385,7 +414,12 @@ int main(int argc, char** argv) {
 
 
 	vector<Mat> hist_image;
-	int blur_skip = 9;
+	int blur_skip;
+
+	if (f_center)
+		blur_skip = 0;
+	else
+		blur_skip = FRAME_T;
 
 	while (frame_num <= FRAME_MAX && frame_num <= end) {
 
@@ -621,23 +655,24 @@ int main(int argc, char** argv) {
 		// 補完の際に上書きしているのでフレームを再取得
 		//cap >> object;
 
-		warpPerspective(object, transform_image, homography, Size(PANO_W, PANO_H));
+		warpPerspective(object, transform_image, homography, Size(PANO_W,
+				PANO_H));
 
 		Mat h2 = homography;
-		warpPerspective(matrixB, matrixA, h2, Size(PANO_W, PANO_H), CV_INTER_LINEAR
-				| CV_WARP_FILL_OUTLIERS);
+		warpPerspective(matrixB, matrixA, h2, Size(PANO_W, PANO_H),
+				CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS);
 
-		make_pano(transform_image,transform_image2,mask,matrixA);
+		make_pano(transform_image, transform_image2, mask, matrixA);
 		ss << "frame = " << frame_num;
 		putText(transform_image, ss.str(), Point(100, 100),
 				CV_FONT_HERSHEY_SIMPLEX, 1.0, Scalar(255, 255, 255), 1, 8);
 		ss.clear();
 		ss.str("");
-		resize(transform_image,r_result,Size(),0.75,0.75,INTER_LINEAR);
+		resize(transform_image, r_result, Size(), 0.75, 0.75, INTER_LINEAR);
 		VideoWriter.write(r_result);
 		imshow("Object Correspond", transform_image2);
 		waitKey(30);
-		erode(mask,mask2,cv::Mat(), cv::Point(-1,-1), 10);
+		erode(mask, mask2, cv::Mat(), cv::Point(-1, -1), 10);
 		feature(transform_image2, mask2, imageKeypoints, imageDescriptors);
 		blur_skip = FRAME_T;
 		for (int i = 0; i < FRAME_T; i++) {
