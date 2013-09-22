@@ -1,3 +1,9 @@
+<<<<<<< HEAD
 #Sun Sep 22 15:32:38 JST 2013
 eclipse.preferences.version=1
 encoding//src/mysurf_panorama_plane.cpp=UTF-8
+=======
+#Tue Sep 17 15:52:56 JST 2013
+eclipse.preferences.version=1
+encoding//src/mysurf_panorama_plane.cpp=EUC-JP
+>>>>>>> 939e70bee9bae52d8c81c0d61e9c446771273e2e
