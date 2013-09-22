@@ -260,7 +260,6 @@ int main(int argc, char** argv) {
 	Vec3b cal;
 	Vec3b tmpc;
 
-
 	// パノラマ平面の
 	int roll = 0;
 	int pitch = 0;
@@ -336,7 +335,6 @@ int main(int argc, char** argv) {
 	// 各種アルゴリズムによる特徴点検出および特徴量記述
 
 
-
 	// SIFT 
 	//	cv::SIFT feature;
 
@@ -367,7 +365,6 @@ int main(int argc, char** argv) {
 	log << "<Algorithm Param>" << endl;
 	for (int ii = 0; ii < v_log_str.size(); ii++)
 		log << v_log_str[ii] << " " << feature.getDouble(v_log_str[ii]) << endl;
-
 
 	//SurfFeatureDetector detector(5, 3, 4, true);
 	//SurfDescriptorExtractor extractor;
@@ -435,7 +432,6 @@ int main(int argc, char** argv) {
 		blur_skip = 0;
 	else
 		blur_skip = FRAME_T;
-
 
 	while (frame_num <= FRAME_MAX && frame_num <= end) {
 
@@ -574,93 +570,95 @@ int main(int argc, char** argv) {
 		imshow("matches", r_result);
 		waitKey(30);
 
+		// パノラマ平面の特徴点などは image
+		// 取得したフレームの特徴点などは object
+		// で固定なのでコピー作業はいらない
 		//		imageKeypoints = objectKeypoints;
 		//		objectDescriptors.copyTo(imageDescriptors);
 		//		image = object.clone();
-		/*
-		 cout << "補完開始" << endl;
-		 vector<Point2f> dist;
-		 vector<Point2f> est_pt1 = pt1, est_pt2;
-		 Mat est_h_base = h_base.clone();
-		 float inv_skip = 1.0 / (float) (blur_skip + 1);
-		 frame_num -= blur_skip;
-		 cap.set(CV_CAP_PROP_POS_FRAMES, frame_num - blur_skip);
-		 cout << "pt1 " << pt1[0] << endl;
-		 cout << "pt2 " << pt2[0] << endl;
-		 for (int k = 0; k < blur_skip; k++) {
-		 est_pt2.clear();
-		 for (int l = 0; l < good_objectKeypoints.size(); l++)
-		 est_pt2.push_back(est_pt1[l] + (pt2[l] - pt1[l]) * inv_skip);
-		 cout << "est_pt1 " << est_pt1[0] << endl;
-		 cout << "est_pt2 " << est_pt2[0] << endl;
-		 //waitKey(0);
-		 // 補完した点でホモグラフィ−行列を計算
-		 n = pt1.size() / 2;
-		 printf("n = %d\n", n);
-		 homography = findHomography(Mat(est_pt1), Mat(est_pt2), CV_RANSAC,
-		 5.0);
+		if (f_comp) {
+			cout << "補完開始" << endl;
+			vector<Point2f> dist;
+			vector<Point2f> est_pt1 = pt1, est_pt2;
+			Mat est_h_base = h_base.clone();
+			float inv_skip = 1.0 / (float) (blur_skip + 1);
+			frame_num -= blur_skip;
+			cap.set(CV_CAP_PROP_POS_FRAMES, frame_num - blur_skip);
+			cout << "pt1 " << pt1[0] << endl;
+			cout << "pt2 " << pt2[0] << endl;
+			for (int k = 0; k < blur_skip; k++) {
+				est_pt2.clear();
+				for (int l = 0; l < good_objectKeypoints.size(); l++)
+					est_pt2.push_back(est_pt1[l] + (pt2[l] - pt1[l]) * inv_skip);
+				cout << "est_pt1 " << est_pt1[0] << endl;
+				cout << "est_pt2 " << est_pt2[0] << endl;
+				//waitKey(0);
+				// 補完した点でホモグラフィ−行列を計算
+				n = pt1.size() / 2;
+				printf("n = %d\n", n);
+				homography = findHomography(Mat(est_pt1), Mat(est_pt2),
+						CV_RANSAC, 5.0);
 
-		 // パノラマ平面へのホモグラフィーを計算
-		 est_h_base = est_h_base * homography;
-		 //h_base = h_base * homography;
+				// パノラマ平面へのホモグラフィーを計算
+				est_h_base = est_h_base * homography;
+				//h_base = h_base * homography;
 
-		 // 飛ばしたフレームを取得しパノラマ平面へ投影
-
-
-		 cap >> object;
-		 warpPerspective(object, transform_image, est_h_base, object.size());
-		 Mat h2 = est_h_base;
-		 warpPerspective(matrixB, matrixA, h2, matrixB.size(),
-		 CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS);
-
-		 // 特徴点をコピー
-		 est_pt1 = est_pt2;
+				// 飛ばしたフレームを取得しパノラマ平面へ投影
 
 
-		 make_pano(transform_image, transform_image2, mask, matrixA);
+				cap >> object;
+				warpPerspective(object, transform_image, est_h_base,
+						object.size());
+				Mat h2 = est_h_base;
+				warpPerspective(matrixB, matrixA, h2, matrixB.size(),
+						CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS);
 
-		 for (int i = 0; i < w; i++) {
-		 for (int j = 0; j < h; j++) {
-		 cal = transform_image.at<Vec3b> (j, i);
-		 //               if(cal.val[0]!=0||cal.val[1]!=0||cal.val[2]!=0){
-		 tmpc = transform_image2.at<Vec3b> (j, i);
-		 if (mask.at<unsigned char> (j, i) == 0) {
-		 //if(tmpc.val[0]==0&&tmpc.val[1]==0&&tmpc.val[2]==0){
-		 tmpc.val[0] = cal.val[0];
-		 tmpc.val[1] = cal.val[1];
-		 tmpc.val[2] = cal.val[2];
-		 if (matrixA.at<unsigned char> (j, i) == 255)
-		 mask.at<unsigned char> (j, i) = matrixA.at<
-		 unsigned char> (j, i);
+				// 特徴点をコピー
+				est_pt1 = est_pt2;
 
-		 }
-		 transform_image2.at<Vec3b> (j, i) = tmpc;
-		 }
-		 }
+				make_pano(transform_image, transform_image2, mask, matrixA);
 
-		 ss << "frame = " << frame_num;
-		 putText(transform_image, ss.str(), Point(100, 100),
-		 CV_FONT_HERSHEY_SIMPLEX, 1.0, Scalar(255, 255, 255), 1, 8);
-		 ss.clear();
-		 ss.str("");
-		 VideoWriter.write(transform_image);
-		 imshow("Object Correspond", transform_image2);
-		 frame_num++;
-		 waitKey(30);
-		 //cvWaitKey(0);
+				for (int i = 0; i < w; i++) {
+					for (int j = 0; j < h; j++) {
+						cal = transform_image.at<Vec3b> (j, i);
+						//               if(cal.val[0]!=0||cal.val[1]!=0||cal.val[2]!=0){
+						tmpc = transform_image2.at<Vec3b> (j, i);
+						if (mask.at<unsigned char> (j, i) == 0) {
+							//if(tmpc.val[0]==0&&tmpc.val[1]==0&&tmpc.val[2]==0){
+							tmpc.val[0] = cal.val[0];
+							tmpc.val[1] = cal.val[1];
+							tmpc.val[2] = cal.val[2];
+							if (matrixA.at<unsigned char> (j, i) == 255)
+								mask.at<unsigned char> (j, i) = matrixA.at<
+										unsigned char> (j, i);
 
-		 }
-		 */
-		//n = ptpairs.size()/2;
+						}
+						transform_image2.at<Vec3b> (j, i) = tmpc;
+					}
+				}
 
+				ss << "frame = " << frame_num;
+				putText(transform_image, ss.str(), Point(100, 100),
+						CV_FONT_HERSHEY_SIMPLEX, 1.0, Scalar(255, 255, 255), 1,
+						8);
+				ss.clear();
+				ss.str("");
+				VideoWriter.write(transform_image);
+				imshow("Object Correspond", transform_image2);
+				frame_num++;
+				waitKey(30);
+				//cvWaitKey(0);
+
+			}
+			// 補完の際に上書きしているのでフレームを再取得
+			cap >> object;
+
+		}
 		n = pt1.size();
 		printf("n = %d\n", n);
 		printf("num_of_obj = %d\n", good_objectKeypoints.size());
 		printf("num_of_img = %d\n", good_imageKeypoints.size());
 		if (n >= 4) {
-
-			//			_pt1 = Mat(pt1);
-			//			_pt2 = Mat(pt2);
 			homography = findHomography(Mat(pt1), Mat(pt2), CV_RANSAC, 5.0);
 		} else {
 			setHomographyReset(&homography);
@@ -670,11 +668,8 @@ int main(int argc, char** argv) {
 		cv::Mat tmp = homography.clone();
 		out_Hmat << tmp << endl;
 
+		// パノラマ平面に対するホモグラフィーを直接求めているためh_baseにかけたりしなくて良い
 		//h_base = h_base * homography;
-
-		// 補完の際に上書きしているのでフレームを再取得
-		//cap >> object;
-
 
 		warpPerspective(object, transform_image, homography, Size(PANO_W,
 				PANO_H));
@@ -697,11 +692,11 @@ int main(int argc, char** argv) {
 		waitKey(30);
 		erode(mask, mask2, cv::Mat(), cv::Point(-1, -1), 10);
 
-		resize(transform_image,r_result,Size(),0.75,0.75,INTER_LINEAR);
+		resize(transform_image, r_result, Size(), 0.75, 0.75, INTER_LINEAR);
 		VideoWriter.write(r_result);
 		imshow("Object Correspond", transform_image2);
 		waitKey(30);
-		erode(mask,mask2,cv::Mat(), cv::Point(-1,-1), 10);
+		erode(mask, mask2, cv::Mat(), cv::Point(-1, -1), 10);
 
 		feature(transform_image2, mask2, imageKeypoints, imageDescriptors);
 		blur_skip = FRAME_T;
