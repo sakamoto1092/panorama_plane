@@ -1,0 +1,29 @@
+/home/k-sakamoto/workspace/my_panorama_plane/Debug/my_panorama cam_data.txt center/GC_B_05_center.png 0 2000 5
+<avi_file_name>
+/d/mvsraid/DATA/2013-06-28-FukuiCityGym-BasketBall/ORIGINAL/GC-B-05/20130628_141343_308.3gp
+<A1>
+[1, 0, -640;
+  0, 1, -360;
+  0, 0, 1080]
+<A2>
+[1080, 0, 1280;
+  0, 1080, 720;
+  0, 0, 1]
+<roll pitch yaw>
+0 0 0
+<FRAME_ T> 
+4
+<Comp>
+1
+<use center>
+1
+<deblur>
+1
+<Algorithm> 
+SURF
+<Algorithm Param>
+extended 1
+hessianThreshold 5
+nOctaveLayers 4
+nOctaves 3
+upright 0
