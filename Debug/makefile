@@ -38,6 +38,7 @@ endif
 # Add inputs and outputs from these tool invocations to the build variables 
 
 # All Target
+<<<<<<< HEAD
 all: mypanorama_plane
 
 # Tool invocations
@@ -45,12 +46,25 @@ mypanorama_plane: $(OBJS) $(USER_OBJS)
 	@echo 'Building target: $@'
 	@echo 'Invoking: GCC C++ Linker'
 	g++  -o"mypanorama_plane" $(OBJS) $(USER_OBJS) $(LIBS)
+=======
+all: my_panorama
+
+# Tool invocations
+my_panorama: $(OBJS) $(USER_OBJS)
+	@echo 'Building target: $@'
+	@echo 'Invoking: GCC C++ Linker'
+	g++  -o"my_panorama" $(OBJS) $(USER_OBJS) $(LIBS)
+>>>>>>> home/master
 	@echo 'Finished building target: $@'
 	@echo ' '
 
 # Other Targets
 clean:
+<<<<<<< HEAD
 	-$(RM) $(OBJS)$(C++_DEPS)$(C_DEPS)$(CC_DEPS)$(CPP_DEPS)$(EXECUTABLES)$(CXX_DEPS)$(C_UPPER_DEPS) mypanorama_plane
+=======
+	-$(RM) $(OBJS)$(C++_DEPS)$(C_DEPS)$(CC_DEPS)$(CPP_DEPS)$(EXECUTABLES)$(CXX_DEPS)$(C_UPPER_DEPS) my_panorama
+>>>>>>> home/master
 	-@echo ' '
 
 .PHONY: all clean dependents
