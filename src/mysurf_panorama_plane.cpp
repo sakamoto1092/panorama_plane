@@ -745,6 +745,7 @@ int main(int argc, char** argv) {
 			printf("frame_num = %d\n", frame_num);
 		}
 
+		cout << Mat(pt1) << endl;
 		cv::Mat tmp = homography.clone();
 		out_Hmat << tmp << endl;
 
