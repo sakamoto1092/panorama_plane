@@ -24,7 +24,6 @@ using boost::program_options::store;
 using boost::program_options::parse_command_line;
 using boost::program_options::notify;
 
-
 // Tilt :
 int SetTiltRotationMatrix(Mat *tiltMatrix, double tilt_deg) {
 	double tilt_angle;
@@ -130,7 +129,6 @@ double compareSURFDescriptors(const float* d1, const float* d2, double best,
 	}
 	return total_cost;
 }
-
 
 void get_histimage(Mat srcimage, Mat *hist_image, Mat count) {
 
@@ -316,7 +314,6 @@ int main(int argc, char** argv) {
 	A1Matrix.at<double> (1, 2) = -360;
 	A1Matrix.at<double> (2, 2) = 1080;
 
-
 	A2Matrix.at<double> (0, 0) = 600;
 	A2Matrix.at<double> (1, 1) = 600;
 	A2Matrix.at<double> (0, 2) = PANO_W / 2;
@@ -358,6 +355,8 @@ int main(int argc, char** argv) {
 
 		if (vm.count("end")) // 終了フレーム番号
 			end = vm["end"].as<int> ();
+		else
+			end = 20000; // どの動画よりも多いフレーム数を指定
 
 		if (vm.count("center")) { // センターサークル画像名
 			n_center = vm["center"].as<string> ();
@@ -425,7 +424,7 @@ int main(int argc, char** argv) {
 		frame_num = 0;
 	}
 	feature = Feature2D::create(algorithm_type);
-	if (algorithm_type.compare("SURF") == 1) {
+	if (algorithm_type.compare("SURF") == 0) {
 		feature->set("extended", 1);
 		feature->set("hessianThreshold", 50);
 		feature->set("nOctaveLayers", 4);
@@ -441,7 +440,7 @@ int main(int argc, char** argv) {
 	SetYawRotationMatrix(&yawMatrix, (double) yaw);
 
 	// 最終的なパノラマ平面へのホモグラフィ行列を計算
-	h_base = A2Matrix * A1Matrix * yawMatrix * pitchMatrix * rollMatrix;
+	h_base = A2Matrix * rollMatrix * pitchMatrix * yawMatrix * A1Matrix;
 
 	cout << h_base << endl;
 
@@ -486,18 +485,96 @@ int main(int argc, char** argv) {
 	white_img = Mat(image.rows, image.cols, CV_8U, cv::Scalar(255));
 	transform_image2 = cv::Mat::zeros(Size(PANO_W, PANO_H), CV_8UC3);
 
-	// 特徴点の検出と特徴量の記述
-	feature->operator ()(gray_image, Mat(), imageKeypoints, imageDescriptors);
-
-	warpPerspective(image, transform_image, h_base, Size(PANO_W, PANO_H)); // 先頭フレームをパノラマ平面へ投影
-
 	// パノラマ動画ファイルを作成
 	if (f_video)
 		VideoWriter.open(n_video, CV_FOURCC('X', 'V', 'I', 'D'), (int) fps,
 				Size(PANO_W * 0.75, PANO_H * 0.75), 1);
 
-	warpPerspective(white_img, pano_black, h_base, Size(PANO_W, PANO_H),
-			CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS);
+
+	// センター画像がパノラマに投影されないようにセンター画像と最初のフレームのマッチングを取る
+	if (f_center) {
+		// センターの特徴点の検出と特徴量の記述
+		feature->operator ()(gray_image, Mat(), imageKeypoints,
+				imageDescriptors);
+
+		// 最初のフレームを取得
+		cap >> object;
+		frame_num++;
+
+		// 最初のフレームの特徴量を計算
+		cvtColor(object, gray_image, CV_RGB2GRAY);
+		feature->operator ()(gray_image, Mat(), objectKeypoints,
+				objectDescriptors);
+
+		std::vector<std::vector<cv::DMatch> > matches12, matches21;
+		int knn = 1;
+		matcher.knnMatch(imageDescriptors, objectDescriptors, matches21, knn);
+		matcher.knnMatch(objectDescriptors, imageDescriptors, matches12, knn);
+		matches.clear();
+		// KNN探索で，1->2と2->1が一致するものだけがマッチしたとみなされる
+		for (size_t m = 0; m < matches12.size(); m++) {
+			bool findCrossCheck = false;
+			for (size_t fk = 0; fk < matches12[m].size(); fk++) {
+				cv::DMatch forward = matches12[m][fk];
+				for (size_t bk = 0; bk < matches21[forward.trainIdx].size(); bk++) {
+					cv::DMatch backward = matches21[forward.trainIdx][bk];
+					if (backward.trainIdx == forward.queryIdx) {
+						matches.push_back(forward);
+						findCrossCheck = true;
+						break;
+					}
+				}
+				if (findCrossCheck)
+					break;
+			}
+		}
+		cout << "matches : " << matches.size() << endl;
+
+		double min_dist = DBL_MAX;
+		for (int i = 0; i < (int) matches.size(); i++) {
+			double dist = matches[i].distance;
+			if (dist < min_dist)
+				min_dist = dist;
+		}
+
+		cout << "min dist :" << min_dist << endl;
+
+		good_objectKeypoints.clear();
+		good_objectKeypoints.clear();
+		good_matches.clear();
+		pt1.clear();
+		pt2.clear();
+		for (int i = 0; i < (int) matches.size(); i++) {
+			if (round(objectKeypoints[matches[i].queryIdx].class_id) == round(
+					imageKeypoints[matches[i].trainIdx].class_id)) {
+
+				if (matches[i].distance < min_dist * 3) {
+					//		  &&	(fabs(objectKeypoints[matches[i].queryIdx].pt.y - imageKeypoints[matches[i].trainIdx].pt.y)
+					//		/ fabs(objectKeypoints[matches[i].queryIdx].pt.x - 	imageKeypoints[matches[i].trainIdx].pt.x)) < 0.1) {
+
+					good_matches.push_back(matches[i]);
+					pt1.push_back(objectKeypoints[matches[i].queryIdx].pt);
+					pt2.push_back(imageKeypoints[matches[i].trainIdx].pt);
+					good_objectKeypoints.push_back(
+							objectKeypoints[matches[i].queryIdx]);
+					good_imageKeypoints.push_back(
+							imageKeypoints[matches[i].trainIdx]);
+				}
+			}
+		}
+		homography = findHomography(Mat(pt1), Mat(pt2), CV_RANSAC, 5.0);
+
+		//h_base *= homography;
+
+		warpPerspective(object, transform_image, h_base * homography, Size(PANO_W, PANO_H)); // 先頭フレームをパノラマ平面へ投影
+		warpPerspective(white_img, pano_black, h_base, Size(PANO_W, PANO_H),
+				CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS);
+
+	} else {
+//		warpPerspective(object, transform_image, h_base , Size(PANO_W, PANO_H)); // 先頭フレームをパノラマ平面へ投影
+		warpPerspective(image, transform_image, h_base, Size(PANO_W, PANO_H)); // 先頭フレームをパノラマ平面へ投影
+		warpPerspective(white_img, pano_black, h_base * homography, Size(PANO_W, PANO_H),CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS);
+	}
 
 	make_pano(transform_image, transform_image2, mask, pano_black);
 	Mat mask2;
@@ -537,7 +614,7 @@ int main(int argc, char** argv) {
 	while (frame_num + FRAME_T + 1 < end) {
 		cap >> object;
 		frame_num++;
-		if (frame_num < 1600 && frame_num > 1500)
+/*		if (frame_num < 1600 && frame_num > 1500)
 			while (frame_num < end) {
 				printf("\nframe=%d\n", frame_num);
 
@@ -552,14 +629,14 @@ int main(int argc, char** argv) {
 				// ヒストグラム画像を作成
 				get_histimage(sobel_img, hist_image.data(), count);
 
-				/*
+
 				 // 各ヒストグラムを順次表示
-				 cvNamedWindow("Histogram", CV_WINDOW_AUTOSIZE);
-				 for (int i = 0; i < 100; i++) {
-				 imshow("Histogram", hist_image[i]);
-				 waitKey(0);
-				 }
-				 */
+				 //cvNamedWindow("Histogram", CV_WINDOW_AUTOSIZE);
+				 //for (int i = 0; i < 100; i++) {
+				 //imshow("Histogram", hist_image[i]);
+				 //waitKey(0);
+				 //}
+
 				cout << "dev map : " << count << endl;
 				imshow("check", sobel_img);
 				int key = waitKey(0);
@@ -585,7 +662,9 @@ int main(int argc, char** argv) {
 				} else {
 					break;
 				}
-			}
+
+		}
+*/
 
 		cvtColor(object, gray_image, CV_RGB2GRAY);
 		feature->operator ()(gray_image, Mat(), objectKeypoints,
@@ -595,7 +674,6 @@ int main(int argc, char** argv) {
 
 		cv::Laplacian(object, tmp_img, CV_32F, 1, 1);
 		cv::convertScaleAbs(tmp_img, sobel_img, 1, 0);
-
 
 		//matcher.match(objectDescriptors, imageDescriptors, matches);
 		std::vector<std::vector<cv::DMatch> > matches12, matches21;
@@ -675,7 +753,7 @@ int main(int argc, char** argv) {
 
 		if (f_comp && blur_skip != 0) {
 			cout << "start comp" << endl;
-			vector<Point2f> dist;
+//			vector<Point2f> dist;
 			vector<Point2f> est_pt1 = pt1, est_pt2;
 			Mat est_h_base = h_base.clone();
 			float inv_skip = 1.0 / (float) (blur_skip + 1);
@@ -686,7 +764,7 @@ int main(int argc, char** argv) {
 			for (int k = 0; k < blur_skip; k++) {
 				est_pt2.clear();
 
-				for (int l = 0; l <pt1.size(); l++)
+				for (int l = 0; l < pt1.size(); l++)
 					est_pt2.push_back(est_pt1[l] + (pt2[l] - pt1[l]) * inv_skip);
 				cout << "est_pt1 " << est_pt1[0] << endl;
 				cout << "est_pt2 " << est_pt2[0] << endl;
@@ -706,10 +784,10 @@ int main(int argc, char** argv) {
 
 				cap >> object;
 				warpPerspective(object, transform_image, est_h_base,
-						object.size());
+						Size(PANO_W,PANO_H));
 				Mat h2 = est_h_base;
 
-				warpPerspective(white_img, pano_black, h2, white_img.size(),
+				warpPerspective(white_img, pano_black, h2, Size(PANO_W,PANO_H),
 						CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS);
 
 				// 特徴点をコピー
@@ -723,7 +801,10 @@ int main(int argc, char** argv) {
 						8);
 				ss.clear();
 				ss.str("");
-				VideoWriter.write(transform_image);
+				if(f_video){
+					resize(transform_image, r_result, Size(), 0.75, 0.75, INTER_LINEAR);
+					VideoWriter.write(r_result);
+				}
 				imshow("Object Correspond", transform_image2);
 				frame_num++;
 				waitKey(30);
@@ -768,18 +849,13 @@ int main(int argc, char** argv) {
 		ss.clear();
 		ss.str("");
 
-		resize(transform_image, r_result, Size(), 0.75, 0.75, INTER_LINEAR);
-		VideoWriter.write(r_result);
+		if(f_video){
+			resize(transform_image, r_result, Size(), 0.75, 0.75, INTER_LINEAR);
+			VideoWriter.write(r_result);
+		}
 		imshow("Object Correspond", transform_image2);
 		waitKey(30);
 		erode(mask, mask2, cv::Mat(), cv::Point(-1, -1), 10);
-
-		resize(transform_image, r_result, Size(), 0.75, 0.75, INTER_LINEAR);
-		VideoWriter.write(r_result);
-		imshow("Object Correspond", transform_image2);
-		waitKey(30);
-		erode(mask, mask2, cv::Mat(), cv::Point(-1, -1), 10);
-
 
 		feature->operator ()(transform_image2, mask2, imageKeypoints,
 				imageDescriptors);
