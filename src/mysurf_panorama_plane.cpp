@@ -742,6 +742,12 @@ int main(int argc, char** argv) {
 		resize(result, r_result, Size(), 0.5, 0.5, INTER_LANCZOS4);
 		namedWindow("matches", CV_WINDOW_AUTOSIZE);
 		imshow("matches", r_result);
+		ss << "img/match_" << frame_num << ".jpg";
+		std::cout << ss.str();
+		imwrite(ss.str(), r_result);
+		ss.clear();
+		ss.str("");
+
 		waitKey(30);
 
 		// パノラマ平面の特徴点などは image
@@ -871,6 +877,7 @@ int main(int argc, char** argv) {
 	imshow("Object Correspond", transform_image2);
 	cvWaitKey(0);
 	imwrite("transform4.jpg", transform_image2);
+
 
 	return 0;
 }
