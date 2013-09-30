@@ -217,6 +217,16 @@ void make_pano(Mat src, Mat dst, Mat mask, Mat roi) {
 	}
 }
 
+
+/*
+ * 現状は
+ * パノラマ画像全体と取り出したフレーム間でマッチングしている
+ * パノラマ画像は広角なため本来対応するはずのない部分との誤対応が増えるためにマッチングが今ひとつ
+ *
+ * 改善案として
+ * センサ情報で大まかにパノラマ平面のどこに投影されるかを計算して
+ * それをマスクとし，そのマスクをかけた領域のパノラマ部分画像と取り出したフレーム間でマッチングをすればより良くなる可能性がある
+ */
 int main(int argc, char** argv) {
 
 	VideoWriter VideoWriter; // パノラマ動画
@@ -301,7 +311,7 @@ int main(int argc, char** argv) {
 	// パノラマ平面の構成
 	int roll = 0;
 	int pitch = 0;
-	int yaw = 0;
+	int yaw = 45;
 	Mat A1Matrix = cv::Mat::eye(3, 3, CV_64FC1);
 	Mat A2Matrix = cv::Mat::eye(3, 3, CV_64FC1);
 
@@ -314,8 +324,8 @@ int main(int argc, char** argv) {
 	A1Matrix.at<double> (1, 2) = -360;
 	A1Matrix.at<double> (2, 2) = 1080;
 
-	A2Matrix.at<double> (0, 0) = 600;
-	A2Matrix.at<double> (1, 1) = 600;
+	A2Matrix.at<double> (0, 0) = 800;
+	A2Matrix.at<double> (1, 1) = 800;
 	A2Matrix.at<double> (0, 2) = PANO_W / 2;
 	A2Matrix.at<double> (1, 2) = PANO_H / 2;
 
@@ -426,7 +436,7 @@ int main(int argc, char** argv) {
 	feature = Feature2D::create(algorithm_type);
 	if (algorithm_type.compare("SURF") == 0) {
 		feature->set("extended", 1);
-		feature->set("hessianThreshold", 50);
+		feature->set("hessianThreshold", 20);
 		feature->set("nOctaveLayers", 4);
 		feature->set("nOctaves", 3);
 		feature->set("upright", 0);
@@ -567,13 +577,13 @@ int main(int argc, char** argv) {
 		//h_base *= homography;
 
 		warpPerspective(object, transform_image, h_base * homography, Size(PANO_W, PANO_H)); // 先頭フレームをパノラマ平面へ投影
-		warpPerspective(white_img, pano_black, h_base, Size(PANO_W, PANO_H),
+		warpPerspective(white_img, pano_black, h_base* homography, Size(PANO_W, PANO_H),
 				CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS);
 
 	} else {
 //		warpPerspective(object, transform_image, h_base , Size(PANO_W, PANO_H)); // 先頭フレームをパノラマ平面へ投影
 		warpPerspective(image, transform_image, h_base, Size(PANO_W, PANO_H)); // 先頭フレームをパノラマ平面へ投影
-		warpPerspective(white_img, pano_black, h_base * homography, Size(PANO_W, PANO_H),CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS);
+		warpPerspective(white_img, pano_black, h_base , Size(PANO_W, PANO_H),CV_INTER_LINEAR | CV_WARP_FILL_OUTLIERS);
 	}
 
 	make_pano(transform_image, transform_image2, mask, pano_black);
@@ -861,7 +871,7 @@ int main(int argc, char** argv) {
 		}
 		imshow("Object Correspond", transform_image2);
 		waitKey(30);
-		erode(mask, mask2, cv::Mat(), cv::Point(-1, -1), 10);
+		erode(pano_black, mask2, cv::Mat(), cv::Point(-1, -1), 20);
 
 		feature->operator ()(transform_image2, mask2, imageKeypoints,
 				imageDescriptors);
