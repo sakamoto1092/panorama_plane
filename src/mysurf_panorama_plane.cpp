@@ -436,7 +436,7 @@ int main(int argc, char** argv) {
 	feature = Feature2D::create(algorithm_type);
 	if (algorithm_type.compare("SURF") == 0) {
 		feature->set("extended", 1);
-		feature->set("hessianThreshold", 20);
+		feature->set("hessianThreshold", 50);
 		feature->set("nOctaveLayers", 4);
 		feature->set("nOctaves", 3);
 		feature->set("upright", 0);
@@ -871,7 +871,7 @@ int main(int argc, char** argv) {
 		}
 		imshow("Object Correspond", transform_image2);
 		waitKey(30);
-		erode(pano_black, mask2, cv::Mat(), cv::Point(-1, -1), 20);
+		erode(mask, mask2, cv::Mat(), cv::Point(-1, -1), 20);
 
 		feature->operator ()(transform_image2, mask2, imageKeypoints,
 				imageDescriptors);
