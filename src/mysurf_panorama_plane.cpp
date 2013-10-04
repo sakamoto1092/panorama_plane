@@ -311,7 +311,7 @@ int main(int argc, char** argv) {
 	// パノラマ平面の構成
 	int roll = 0;
 	int pitch = 0;
-	int yaw = 45;
+	int yaw = 0;
 	Mat A1Matrix = cv::Mat::eye(3, 3, CV_64FC1);
 	Mat A2Matrix = cv::Mat::eye(3, 3, CV_64FC1);
 
@@ -871,7 +871,7 @@ int main(int argc, char** argv) {
 		}
 		imshow("Object Correspond", transform_image2);
 		waitKey(30);
-		erode(mask, mask2, cv::Mat(), cv::Point(-1, -1), 20);
+		erode(pano_black, mask2, cv::Mat(), cv::Point(-1, -1), 10);
 
 		feature->operator ()(transform_image2, mask2, imageKeypoints,
 				imageDescriptors);
