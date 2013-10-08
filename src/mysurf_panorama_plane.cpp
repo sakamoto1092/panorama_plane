@@ -624,20 +624,20 @@ int main(int argc, char** argv) {
 	while (frame_num + FRAME_T + 1 < end) {
 		cap >> object;
 		frame_num++;
-/*		if (frame_num < 1600 && frame_num > 1500)
+		if (frame_num < 1600 && frame_num > 1500)
 			while (frame_num < end) {
 				printf("\nframe=%d\n", frame_num);
-
+/*
 				cv::Laplacian(object, tmp_img, CV_32F, 1, 1);
 				//Canny(cvarrToMat(objectc), sobel_img,50,100);
 				cv::convertScaleAbs(tmp_img, sobel_img, 1, 0);
 
 				// 縦横１０分割したエッジ画像の各ヒストグラムの領域確保
-				for (int i = 0; i < 100; i++)
-					hist_image.push_back(Mat(200, 260, CV_8U, cv::Scalar(255)));
+				//for (int i = 0; i < 100; i++)
+				//	hist_image.push_back(Mat(200, 260, CV_8U, cv::Scalar(255)));
 
 				// ヒストグラム画像を作成
-				get_histimage(sobel_img, hist_image.data(), count);
+				//get_histimage(sobel_img, hist_image.data(), count);
 
 
 				 // 各ヒストグラムを順次表示
